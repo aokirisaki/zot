@@ -327,8 +327,6 @@ func getImage(ctx context.Context, config searchConfig, username, password, imag
 		hasTagPrefix := strings.HasPrefix(tag, "sha256-")
 		hasTagSuffix := strings.HasSuffix(tag, ".sig")
 
-		// check if it's an image or a signature
-		// we don't want to show signatures in cli responses
 		if hasTagPrefix && hasTagSuffix {
 			continue
 		}

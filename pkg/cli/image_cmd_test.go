@@ -376,7 +376,20 @@ func TestSignature(t *testing.T) {
 		str := space.ReplaceAllString(buff.String(), " ")
 		actual := strings.TrimSpace(str)
 		So(actual, ShouldContainSubstring, "IMAGE NAME TAG DIGEST SIGNED SIZE")
-		So(actual, ShouldContainSubstring, "repo7 test:1.0 883fc0c5 true")
+		So(actual, ShouldContainSubstring, "repo7 test:1.0 883fc0c5 true 15B")
+
+		t.Log("Test getting all images using rest calls to get catalog and individual manifests")
+		cmd = MockNewImageCommand(new(searchService))
+		buff = &bytes.Buffer{}
+		cmd.SetOut(buff)
+		cmd.SetErr(buff)
+		cmd.SetArgs(args)
+		err = cmd.Execute()
+		So(err, ShouldBeNil)
+		str = space.ReplaceAllString(buff.String(), " ")
+		actual = strings.TrimSpace(str)
+		So(actual, ShouldContainSubstring, "IMAGE NAME TAG DIGEST SIGNED SIZE")
+		So(actual, ShouldContainSubstring, "repo7 test:1.0 883fc0c5 true 15B")
 
 		err = os.Chdir(currentWorkingDir)
 		So(err, ShouldBeNil)

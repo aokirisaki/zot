@@ -17,8 +17,11 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
+
+	"github.com/sigstore/cosign/pkg/oci/remote"
 
 	zotErrors "zotregistry.io/zot/errors"
 	"zotregistry.io/zot/pkg/storage/local"
@@ -290,14 +293,32 @@ func (p *requestsPool) doJob(ctx context.Context, job *manifestJob) {
 		)
 	}
 
-	size += uint64(job.manifestResp.Config.Size)
+	isSigned := false
+	cosignTag := strings.Replace(digestStr, ":", "-", 1) + "." + remote.SignatureTagSuffix
 
-	manifestSize, err := strconv.Atoi(header.Get("Content-Length"))
+	_, err = makeGETRequest(ctx, *job.config.servURL+"/v2/"+job.imageName+
+		"/manifests/"+cosignTag, job.username, job.password,
+		*job.config.verifyTLS, *job.config.debug, &job.manifestResp, job.config.resultWriter)
 	if err != nil {
 		p.outputCh <- stringResult{"", err}
 	}
 
-	size += uint64(manifestSize)
+	if err == nil {
+		isSigned = true
+	}
+
+	if !isSigned {
+		_, err = makeGETRequest(ctx, fmt.Sprintf("%s/oras/artifacts/v1/%s/manifests/%s/referrers",
+			*job.config.servURL, job.imageName, digestStr), job.username, job.password,
+			*job.config.verifyTLS, *job.config.debug, &job.manifestResp, job.config.resultWriter)
+		if err != nil {
+			p.outputCh <- stringResult{"", err}
+		}
+
+		if err == nil {
+			isSigned = true
+		}
+	}
 
 	image := &imageStruct{}
 	image.verbose = *job.config.verbose
@@ -307,6 +328,7 @@ func (p *requestsPool) doJob(ctx context.Context, job *manifestJob) {
 	image.Size = strconv.Itoa(int(size))
 	image.ConfigDigest = configDigest
 	image.Layers = layers
+	image.IsSigned = isSigned
 
 	str, err := image.string(*job.config.outputFormat, len(job.imageName), len(job.tagName))
 	if err != nil {
