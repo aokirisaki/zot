@@ -14,6 +14,7 @@ import (
 	glob "github.com/bmatcuk/doublestar/v4"
 	"github.com/mitchellh/mapstructure"
 	distspec "github.com/opencontainers/distribution-spec/specs-go"
+	"github.com/phayes/freeport"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -619,6 +620,18 @@ func LoadConfiguration(config *config.Config, configPath string) error {
 	// defaults
 	applyDefaultValues(config, viperInstance)
 
+	// set port if 0
+	if config.HTTP.Port == "" || config.HTTP.Port == "0" {
+		newPort, err := freeport.GetFreePort()
+		if err != nil {
+			log.Error().Str("port", config.HTTP.Port).Msg("invalid port")
+
+			return errors.ErrBadConfig
+		}
+
+		config.HTTP.Port = strconv.Itoa(newPort)
+	}
+
 	// various config checks
 	if err := validateConfiguration(config); err != nil {
 		return err
@@ -708,7 +721,7 @@ func validateHTTP(config *config.Config) error {
 			return errors.ErrBadConfig
 		}
 
-		fmt.Printf("HTTP port %d\n", port)
+		log.Info().Msgf("HTTP port %d\n", port)
 	}
 
 	return nil

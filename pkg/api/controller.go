@@ -166,24 +166,8 @@ func (c *Controller) Run(reloadCtx context.Context) error {
 		return err
 	}
 
-	if c.Config.HTTP.Port == "0" || c.Config.HTTP.Port == "" {
-		chosenAddr, ok := listener.Addr().(*net.TCPAddr)
-		if !ok {
-			c.Log.Error().Str("port", c.Config.HTTP.Port).Msg("invalid addr type")
-
-			return errors.ErrBadType
-		}
-
-		c.chosenPort = chosenAddr.Port
-
-		c.Log.Info().Int("port", chosenAddr.Port).IPAddr("address", chosenAddr.IP).Msg(
-			"port is unspecified, listening on kernel chosen port",
-		)
-	} else {
-		chosenPort, _ := strconv.ParseInt(c.Config.HTTP.Port, 10, 64)
-
-		c.chosenPort = int(chosenPort)
-	}
+	chosenPort, _ := strconv.ParseInt(c.Config.HTTP.Port, 10, 64)
+	c.chosenPort = int(chosenPort)
 
 	if c.Config.HTTP.TLS != nil && c.Config.HTTP.TLS.Key != "" && c.Config.HTTP.TLS.Cert != "" {
 		server.TLSConfig = &tls.Config{
